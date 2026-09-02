@@ -3,17 +3,10 @@
 layout(location=0) out vec4 color;
 
 uniform float Time;          // task d.)
-uniform float waitDur;      // task d.)
 
 void changeColor(){
-    if(Time < waitDur){
-        color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    }
-    else {
-        float activeTime = Time - waitDur;
-        float red = 0.5 * (sin(activeTime) + 1.0);
+        float red = 0.5 * (sin(Time) + 1.0);
         color = vec4(red, 0.5f, 1.0f, 1.0f);
-    }
 }
 
 void checkerBoard(){
@@ -37,11 +30,13 @@ void checkerBoard(){
 
 void main()
 {
+    //default 
     //color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
-     //task d.)
+    //optional task d.)
     changeColor();
-    //task a.)
+
+    //optional task a.)
     //checkerBoard();
     
 
