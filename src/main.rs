@@ -192,6 +192,24 @@ fn main() {
                 .attach_file("./shaders/simple.frag").attach_file("./shaders/simple.vert")
                 .link()
         };
+
+        let time_name = std::ffi::CString::new("Time").unwrap();
+
+        let time_location = unsafe {
+            gl::GetUniformLocation(
+                simple_shader.program_id,
+                time_name.as_ptr()
+            )
+        };
+
+        let wait_name = std::ffi::CString::new("waitDur").unwrap();
+
+        let wait_location = unsafe {
+            gl::GetUniformLocation(
+                simple_shader.program_id,
+                wait_name.as_ptr()
+            )
+        };
         
 
         // Used to demonstrate keyboard handling for exercise 2.
@@ -259,6 +277,9 @@ fn main() {
 
                 // == // Issue the necessary gl:: commands to draw your scene here
                 simple_shader.activate();
+
+                    gl::Uniform1f(time_location, elapsed);
+                    gl::Uniform1f(wait_location, 2.0);
 
                 gl::BindVertexArray(my_vao);
                 gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
