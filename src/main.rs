@@ -56,29 +56,35 @@ fn offset<T>(n: u32) -> *const c_void {
 
 // == // Generate your VAO here
 unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
-    let mut array: u32 = 0;
+    let mut vao: u32 = 0;
     let mut vbo: u32 = 0;
     let mut  index_buffer: u32 = 0;
 
-    gl::GenVertexArrays(1 ,&mut array);
-    gl::BindVertexArray(array);
-    println!("value of {}", array);
 
+     // * Generate a VAO and bind it
+    gl::GenVertexArrays(1 ,&mut vao);
+    gl::BindVertexArray(vao);
+    println!("value of {}", vao);
+
+    // * Generate a VBO and bind it
     gl::GenBuffers(1,  &mut vbo);
     gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
+    // * Fill it with data
     gl::BufferData(gl::ARRAY_BUFFER, 
         byte_size_of_array(vertices),
         pointer_to_array(vertices),
          gl::STATIC_DRAW);
 
-    //let vap: u32 = 0;
+    // * Configure a VAP for the data and enable it
     gl::VertexAttribPointer(2, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
     gl::EnableVertexAttribArray(2);
 
+    // * Generate a IBO and bind it
     gl::GenBuffers(1,  &mut index_buffer);
     gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, index_buffer);
 
+    // * Fill it with data
     gl::BufferData(gl::ELEMENT_ARRAY_BUFFER,
          byte_size_of_array(indices), 
          pointer_to_array(indices),
@@ -87,9 +93,6 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
     
     println!("value of vertices {:?}", vertices);
     println!("value of indices {:?}", indices);
-    // Implement me!
-
-    // Also, feel free to delete comments :)
 
     // This should:
     // * Generate a VAO and bind it
@@ -99,7 +102,7 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
     // * Generate a IBO and bind it
     // * Fill it with data
     // * Return the ID of the VAO
-    return array;
+    return vao;
 }
 
 
@@ -165,10 +168,10 @@ fn main() {
         // == // Set up your VAO around here
         let vertices = vec![
             -0.6, -0.8, 0.0,
-            0.0, -0.8, 0.0,
-            -0.3, 0.2, 0.0,
+            0.2, -0.8, 0.0,
+            -0.2, 0.2, 0.0,
         ];
-        let indices = vec![1,0,2];
+        let indices = vec![2,0,1];
 
         let my_vao= unsafe {create_vao(&vertices, &indices)
         };
