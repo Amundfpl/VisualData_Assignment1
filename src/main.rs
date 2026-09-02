@@ -50,6 +50,19 @@ fn offset<T>(n: u32) -> *const c_void {
     (n * mem::size_of::<T>() as u32) as *const T as *const c_void
 }
 
+fn colorchange(program_id: u32) -> i32 {
+    let time_name = std::ffi::CString::new("Time").unwrap();
+
+    let time_location = unsafe {
+        gl::GetUniformLocation(
+            program_id,
+            time_name.as_ptr()
+        )
+    };
+
+    time_location
+}
+
 // Get a null pointer (equivalent to an offset of 0)
 // ptr::null()
 
@@ -64,7 +77,6 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
      // * Generate a VAO and bind it
     gl::GenVertexArrays(1 ,&mut vao);
     gl::BindVertexArray(vao);
-    println!("value of {}", vao);
 
     // * Generate a VBO and bind it
     gl::GenBuffers(1,  &mut vbo);
@@ -90,9 +102,6 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
          pointer_to_array(indices),
           gl::STATIC_DRAW
         );
-    
-    println!("value of vertices {:?}", vertices);
-    println!("value of indices {:?}", indices);
 
     // This should:
     // * Generate a VAO and bind it
@@ -169,13 +178,16 @@ fn main() {
         let vertices = vec![
             -0.6, -0.8, 0.0,
             0.2, -0.8, 0.0,
-            -0.2, 0.2, 0.0,
+            -0.6, 0.2, 0.0,
+            0.2, 0.2, 0.0,
         ];
-        let indices = vec![2,0,1];
+        let indices = vec![
+            0,1,2,
+            2,1,3
+        ];
 
         let my_vao= unsafe {create_vao(&vertices, &indices)
         };
-
 
         // == // Set up your shaders here
 
@@ -193,23 +205,8 @@ fn main() {
                 .link()
         };
 
-        let time_name = std::ffi::CString::new("Time").unwrap();
-
-        let time_location = unsafe {
-            gl::GetUniformLocation(
-                simple_shader.program_id,
-                time_name.as_ptr()
-            )
-        };
-
-        let wait_name = std::ffi::CString::new("waitDur").unwrap();
-
-        let wait_location = unsafe {
-            gl::GetUniformLocation(
-                simple_shader.program_id,
-                wait_name.as_ptr()
-            )
-        };
+        //optional a.)
+        let time_location = colorchange(simple_shader.program_id);
         
 
         // Used to demonstrate keyboard handling for exercise 2.
@@ -278,11 +275,12 @@ fn main() {
                 // == // Issue the necessary gl:: commands to draw your scene here
                 simple_shader.activate();
 
-                    gl::Uniform1f(time_location, elapsed);
-                    gl::Uniform1f(wait_location, 2.0);
+                // Task d: animated colour
+                gl::Uniform1f(time_location, elapsed); //task d.)
+
 
                 gl::BindVertexArray(my_vao);
-                gl::DrawElements(gl::TRIANGLES, 3, gl::UNSIGNED_INT, std::ptr::null());
+                gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
 
 
 

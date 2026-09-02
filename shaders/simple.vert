@@ -18,7 +18,10 @@ mat3 mirrorV = mat3(
 
 void main()
 {
-    vec3 transformedPosition = mirrorH * mirrorV * position;
-    //gl_Position = vec4(position, 1.0f);
-    gl_Position = vec4(transformedPosition, 1.0f);
+    // Task 2d: horizontal and vertical mirroring
+    //vec3 transformedPosition = mirrorH * mirrorV * position;
+    //gl_Position = vec4(transformedPosition, 1.0f);
+
+    //default 
+    gl_Position = vec4(position, 1.0f);
 }
