@@ -68,9 +68,10 @@ fn colorchange(program_id: u32) -> i32 {
 
 
 // == // Generate your VAO here
-unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
+unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>, rgba: &Vec<f32>) -> u32 {
     let mut vao: u32 = 0;
     let mut vbo: u32 = 0;
+    let mut c_vbo: u32 = 0;
     let mut  index_buffer: u32 = 0;
 
 
@@ -87,10 +88,27 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>) -> u32 {
         byte_size_of_array(vertices),
         pointer_to_array(vertices),
          gl::STATIC_DRAW);
-
+    
     // * Configure a VAP for the data and enable it
+    //VBO vertices
     gl::VertexAttribPointer(2, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
     gl::EnableVertexAttribArray(2);
+    
+      // color VBO
+    gl::GenBuffers(1, &mut c_vbo);
+    gl::BindBuffer(gl::ARRAY_BUFFER, c_vbo);
+
+    gl::BufferData(gl::ARRAY_BUFFER, 
+        byte_size_of_array(rgba), 
+        pointer_to_array(rgba), 
+        gl::STATIC_DRAW
+    );
+
+    //c_vbo pointer. 
+    gl::VertexAttribPointer(3, 4, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+    gl::EnableVertexAttribArray(3);
+
+
 
     // * Generate a IBO and bind it
     gl::GenBuffers(1,  &mut index_buffer);
@@ -176,17 +194,39 @@ fn main() {
 
         // == // Set up your VAO around here
         let vertices = vec![
-            -0.6, -0.8, 0.0,
-            0.2, -0.8, 0.0,
-            -0.6, 0.2, 0.0,
-            0.2, 0.2, 0.0,
+            -0.2, -0.8, 0.4,
+            0.2, -0.8, 0.4,
+            -0.2, 0.2, 0.4,
+
+            0.0, -0.8, 0.1,
+            0.2, -0.8, 0.1,
+            0.3, 0.9, 0.1,
+
+            -0.2, -0.8, 0.8,
+            0.6, -0.8, 0.8,
+            0.5, 0.5, 0.8, 
         ];
         let indices = vec![
             0,1,2,
-            2,1,3
+            3,4,5,
+            6,7,8
         ];
 
-        let my_vao= unsafe {create_vao(&vertices, &indices)
+        let rgba: Vec<f32> = vec![
+            0.6, 0.2, 0.1, 0.4,
+            0.6, 0.2, 0.1, 0.4,
+            0.6, 0.2, 0.1, 0.4,
+            
+            0.3, 0.1, 0.4, 0.6,
+            0.3, 0.1, 0.4, 0.6,
+            0.3, 0.1, 0.4, 0.6,
+
+            0.3, 0.6, 0.8, 0.2,
+            0.3, 0.6, 0.8, 0.2,
+            0.3, 0.6, 0.8, 0.2,
+        ];
+
+        let my_vao= unsafe {create_vao(&vertices, &indices, &rgba)
         };
 
         // == // Set up your shaders here
@@ -280,7 +320,7 @@ fn main() {
 
 
                 gl::BindVertexArray(my_vao);
-                gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
+                gl::DrawElements(gl::TRIANGLES, 9, gl::UNSIGNED_INT, std::ptr::null());
 
 
 

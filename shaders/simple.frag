@@ -1,6 +1,7 @@
 #version 430 core
 
 layout(location=0) out vec4 color;
+layout(location=4) in vec4 rgba;
 
 uniform float Time;          // task d.)
 
@@ -34,10 +35,12 @@ void main()
     //color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 
     //optional task d.)
-    changeColor();
+    //changeColor();
 
     //optional task a.)
     //checkerBoard();
+
+    color = rgba;  
     
 
 
