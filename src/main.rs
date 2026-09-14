@@ -233,7 +233,8 @@ fn main() {
 
 
 
-        let mut camera = glm::Vec3::new(0.0, 0.0, -3.0);
+        let mut camera = glm::Vec3::new(0.0, 0.0, 3.0);
+        let mut camera_angle = glm::vec2(0.0, 0.0);
         // == // Set up your shaders here
 
         // Basic usage of shader helper:
@@ -285,26 +286,6 @@ fn main() {
                 }
             }
 
-            // Handle keyboard input
-            if let Ok(keys) = pressed_keys.lock() {
-                for key in keys.iter() {
-                    match key {
-                        // The `VirtualKeyCode` enum is defined here:
-                        //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
-
-                        VirtualKeyCode::A => {
-                            _arbitrary_number += delta_time;
-                        }
-                        VirtualKeyCode::D => {
-                            _arbitrary_number -= delta_time;
-                        }
-
-
-                        // default handler:
-                        _ => { }
-                    }
-                }
-            }
             // Handle mouse movement. delta contains the x and y movement of the mouse since last frame in pixels
             if let Ok(mut delta) = mouse_delta.lock() {
 
@@ -324,34 +305,34 @@ fn main() {
                         //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
 
                         VirtualKeyCode::W => {
+                            camera.z -= delta_time;
+                        }
+                        VirtualKeyCode::S => {
                             camera.z += delta_time;
                         }
                         VirtualKeyCode::A => {
-                            camera.x += delta_time;
-                        }
-                        VirtualKeyCode::S => {
-                            camera.z -= delta_time;
-                        }
-                        VirtualKeyCode::D => {
                             camera.x -= delta_time;
                         }
-                        VirtualKeyCode::Space => {
-                            camera.y -= delta_time;
+                        VirtualKeyCode::D => {
+                            camera.x += delta_time;
                         }
-                        VirtualKeyCode::LShift => {
+                        VirtualKeyCode::Space => {
                             camera.y += delta_time;
                         }
+                        VirtualKeyCode::LShift => {
+                            camera.y -= delta_time;
+                        }
                         VirtualKeyCode::Left => {
-                            camera.z += delta_time;
+                            camera_angle.x += delta_time;
                         }
                         VirtualKeyCode::Right => {
-                            camera.z += delta_time;
+                            camera_angle.x -= delta_time;
                         }
                         VirtualKeyCode::Up => {
-                            camera.z += delta_time;
+                            camera_angle.y += delta_time;
                         }
                         VirtualKeyCode::Down => {
-                            camera.z += delta_time;
+                            camera_angle.y -= delta_time;
                         }
 
 
@@ -361,10 +342,12 @@ fn main() {
                 }
             }
 
-            let trans: glm::Mat4 = glm::translation(&glm::vec3(camera.x,camera.y,camera.z));
-            //let rotation: glm::Mat4 = glm::rotation(10.0, &glm::vec3(camera.x, camera.y, camera.z));
+            let mut transform : glm::Mat4 = glm::identity();
+            let trans: glm::Mat4 = glm::translation(&glm::vec3(-camera.x,-camera.y,-camera.z));
+            let horizontal_rotation: glm::Mat4 = glm::rotation(-camera_angle.x, &glm::vec3(0.0, 1.0, 0.0));
+            let vertical_rotation: glm::Mat4 = glm::rotation(-camera_angle.y, &glm::vec3(1.0, 0.0, 0.0));
             let project: glm::Mat4 = glm::perspective(window_aspect_ratio,45.0_f32.to_radians(),1.0,100.0);
-            let transform: glm::Mat4 = project*trans;
+            transform = project*vertical_rotation*horizontal_rotation*trans*transform;
 
 
 
