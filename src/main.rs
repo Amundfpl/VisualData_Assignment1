@@ -16,7 +16,7 @@ mod shader;
 mod util;
 
 use gl::BufferData;
-use glm::length;
+use glm::{Mat4, length};
 use glutin::event::{Event, WindowEvent, DeviceEvent, KeyboardInput, ElementState::{Pressed, Released}, VirtualKeyCode::{self, *}};
 use glutin::event_loop::ControlFlow;
 
@@ -51,6 +51,8 @@ fn offset<T>(n: u32) -> *const c_void {
 }
 
 fn colorchange(program_id: u32) -> i32 {
+
+    //terminated Cstring
     let time_name = std::ffi::CString::new("Time").unwrap();
 
     let time_location = unsafe {
@@ -229,6 +231,9 @@ fn main() {
         let my_vao= unsafe {create_vao(&vertices, &indices, &rgba)
         };
 
+
+
+        let mut camera = glm::Vec3::new(0.0, 0.0, -3.0);
         // == // Set up your shaders here
 
         // Basic usage of shader helper:
@@ -251,6 +256,12 @@ fn main() {
 
         // Used to demonstrate keyboard handling for exercise 2.
         let mut _arbitrary_number = 0.0; // feel free to remove
+
+
+        //SetUp matrix transformation as uniform value:
+        let transform_name = std::ffi::CString::new("transform").unwrap();
+        let matrix_location = unsafe{ gl::GetUniformLocation(simple_shader.program_id, transform_name.as_ptr())
+        };
 
 
         // The main rendering loop
@@ -306,6 +317,57 @@ fn main() {
             // == // Please compute camera transforms here (exercise 2 & 3)
 
 
+            if let Ok(keys) = pressed_keys.lock() {
+                for key in keys.iter() {
+                    match key {
+                        // The `VirtualKeyCode` enum is defined here:
+                        //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
+
+                        VirtualKeyCode::W => {
+                            camera.z += delta_time;
+                        }
+                        VirtualKeyCode::A => {
+                            camera.x += delta_time;
+                        }
+                        VirtualKeyCode::S => {
+                            camera.z -= delta_time;
+                        }
+                        VirtualKeyCode::D => {
+                            camera.x -= delta_time;
+                        }
+                        VirtualKeyCode::Space => {
+                            camera.y -= delta_time;
+                        }
+                        VirtualKeyCode::LShift => {
+                            camera.y += delta_time;
+                        }
+                        VirtualKeyCode::Left => {
+                            camera.z += delta_time;
+                        }
+                        VirtualKeyCode::Right => {
+                            camera.z += delta_time;
+                        }
+                        VirtualKeyCode::Up => {
+                            camera.z += delta_time;
+                        }
+                        VirtualKeyCode::Down => {
+                            camera.z += delta_time;
+                        }
+
+
+                        // default handler:
+                        _ => { }
+                    }
+                }
+            }
+
+            let trans: glm::Mat4 = glm::translation(&glm::vec3(camera.x,camera.y,camera.z));
+            //let rotation: glm::Mat4 = glm::rotation(10.0, &glm::vec3(camera.x, camera.y, camera.z));
+            let project: glm::Mat4 = glm::perspective(window_aspect_ratio,45.0_f32.to_radians(),1.0,100.0);
+            let transform: glm::Mat4 = project*trans;
+
+
+
             unsafe {
                 // Clear the color and depth buffers
                 gl::ClearColor(0.035, 0.046, 0.078, 1.0); // night sky
@@ -317,6 +379,9 @@ fn main() {
 
                 // Task d: animated colour
                 gl::Uniform1f(time_location, elapsed); //task d.)
+
+                gl::UniformMatrix4fv(matrix_location, 1, gl::FALSE, transform.as_ptr());
+                //println!("Camera value x = {}", camera.x);
 
 
                 gl::BindVertexArray(my_vao);

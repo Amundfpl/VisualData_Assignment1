@@ -4,6 +4,9 @@ layout(location=2) in vec3 position;
 layout(location=3) in vec4 rgba;
 layout(location=4) out vec4 Vcolor;
 
+
+uniform mat4 transform;
+
 uniform float Time;
 
 mat3 mirrorH = mat3(
@@ -23,19 +26,19 @@ mat3 mirrorV = mat3(
 float test = sin(Time);
 
 float a = 1.0;
-float b = 0.0;
+float b = test;
 float c = 0.0;
 float d = 0.0;
 float e = 1.0;
 float f = 0.0;
 
-mat4 transform = mat4(
+/*transform = mat4(
     a, d, 0.0, 0.0,
     b, e, 0.0, 0.0,
     0.0, 0.0, 1.0, 0.0,
     c, f, 0.0, 1.0
     );
-
+*/
 
 void main()
 {
