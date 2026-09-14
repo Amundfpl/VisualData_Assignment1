@@ -296,51 +296,71 @@ fn main() {
             }
 
             // == // Please compute camera transforms here (exercise 2 & 3)
+        let mut movement = glm::vec4(0.0, 0.0, 0.0, 0.0);
 
+        if let Ok(keys) = pressed_keys.lock() {
+            for key in keys.iter() {
+                match key {
 
-            if let Ok(keys) = pressed_keys.lock() {
-                for key in keys.iter() {
-                    match key {
-                        // The `VirtualKeyCode` enum is defined here:
-                        //    https://docs.rs/winit/0.25.0/winit/event/enum.VirtualKeyCode.html
-
-                        VirtualKeyCode::W => {
-                            camera.z -= delta_time;
-                        }
-                        VirtualKeyCode::S => {
-                            camera.z += delta_time;
-                        }
-                        VirtualKeyCode::A => {
-                            camera.x -= delta_time;
-                        }
-                        VirtualKeyCode::D => {
-                            camera.x += delta_time;
-                        }
-                        VirtualKeyCode::Space => {
-                            camera.y += delta_time;
-                        }
-                        VirtualKeyCode::LShift => {
-                            camera.y -= delta_time;
-                        }
-                        VirtualKeyCode::Left => {
-                            camera_angle.x += delta_time;
-                        }
-                        VirtualKeyCode::Right => {
-                            camera_angle.x -= delta_time;
-                        }
-                        VirtualKeyCode::Up => {
-                            camera_angle.y += delta_time;
-                        }
-                        VirtualKeyCode::Down => {
-                            camera_angle.y -= delta_time;
-                        }
-
-
-                        // default handler:
-                        _ => { }
+                    VirtualKeyCode::W => {
+                        movement.z -= 1.0;
                     }
+
+                    VirtualKeyCode::S => {
+                        movement.z += 1.0;
+                    }
+
+                    VirtualKeyCode::A => {
+                        movement.x -= 1.0;
+                    }
+
+                    VirtualKeyCode::D => {
+                        movement.x += 1.0;
+                    }
+
+                    VirtualKeyCode::Space => {
+                        movement.y += 1.0;
+                    }
+
+                    VirtualKeyCode::LShift => {
+                        movement.y -= 1.0;
+                    }
+
+                    VirtualKeyCode::Left => {
+                        camera_angle.x += delta_time;
+                    }
+
+                    VirtualKeyCode::Right => {
+                        camera_angle.x -= delta_time;
+                    }
+
+                    VirtualKeyCode::Up => {
+                        camera_angle.y += delta_time;
+                    }
+
+                    VirtualKeyCode::Down => {
+                        camera_angle.y -= delta_time;
+                    }
+
+                    _ => {}
                 }
             }
+        }
+
+            let camera_horizontal_rotation: glm::Mat4 = glm::rotation(
+                camera_angle.x,&glm::vec3(0.0, 1.0, 0.0));
+
+            let camera_vertical_rotation: glm::Mat4 =
+                glm::rotation(
+                    camera_angle.y,&glm::vec3(1.0, 0.0, 0.0));
+
+            let camera_rotation: glm::Mat4 = camera_horizontal_rotation * camera_vertical_rotation;
+
+            let world_movement = camera_rotation * movement;
+
+            camera.x += world_movement.x * delta_time;
+            camera.y += world_movement.y * delta_time;
+            camera.z += world_movement.z * delta_time;
 
             let mut transform : glm::Mat4 = glm::identity();
             let trans: glm::Mat4 = glm::translation(&glm::vec3(-camera.x,-camera.y,-camera.z));
