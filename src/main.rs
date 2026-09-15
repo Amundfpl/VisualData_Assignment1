@@ -196,36 +196,27 @@ fn main() {
 
         // == // Set up your VAO around here
         let vertices = vec![
-            -0.2, -0.8, 0.4,
-            0.2, -0.8, 0.4,
-            -0.2, 0.2, 0.4,
+            0.25, -0.25,  1.0,   // VERY close: view-space z ≈ -1.2
+            -1.0,  1.25,  1.0,   // far:        view-space z ≈ -8.0
+            -1.0,  -0.25,  1.0,   // far:        view-space z ≈ -8.0
+            0.25, 1.25, 1.0,
 
-            0.0, -0.8, 0.1,
-            0.2, -0.8, 0.1,
-            0.3, 0.9, 0.1,
+            
 
-            -0.2, -0.8, 0.8,
-            0.6, -0.8, 0.8,
-            0.5, 0.5, 0.8, 
         ];
         let indices = vec![
             0,1,2,
-            3,4,5,
-            6,7,8
+            1,0,3,
         ];
 
         let rgba: Vec<f32> = vec![
-            0.6, 0.2, 0.1, 0.4,
-            0.6, 0.2, 0.1, 0.4,
-            0.6, 0.2, 0.1, 0.4,
-            
-            0.3, 0.1, 0.4, 0.6,
-            0.3, 0.1, 0.4, 0.6,
-            0.3, 0.1, 0.4, 0.6,
+            0.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
 
-            0.3, 0.6, 0.8, 0.2,
-            0.3, 0.6, 0.8, 0.2,
-            0.3, 0.6, 0.8, 0.2,
+            1.0, 0.0, 1.0, 1.0,
+            0.0, 1.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
         ];
 
         let my_vao= unsafe {create_vao(&vertices, &indices, &rgba)
@@ -388,7 +379,7 @@ fn main() {
 
 
                 gl::BindVertexArray(my_vao);
-                gl::DrawElements(gl::TRIANGLES, 9, gl::UNSIGNED_INT, std::ptr::null());
+                gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
 
 
 

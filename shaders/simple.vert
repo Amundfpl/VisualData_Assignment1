@@ -23,6 +23,7 @@ mat3 mirrorV = mat3(
 
 );
 
+
 float test = sin(Time);
 
 float a = 1.0;
@@ -47,7 +48,6 @@ void main()
     //gl_Position = vec4(transformedPosition, 1.0f);
 
     //default 
-    
     vec4 newPosition = transform * vec4(position, 1.0);
     gl_Position = newPosition;
     Vcolor = rgba;
