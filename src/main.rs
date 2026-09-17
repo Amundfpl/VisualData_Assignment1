@@ -242,8 +242,7 @@ fn main() {
             1.0, 0.0, 0.0, 1.0,
         ];
         
-        let billboard_vao = unsafe {
-    create_vao(&billboard_vertices,&billboard_indices,&billboard_rgba)};
+        let billboard_vao = unsafe { create_vao(&billboard_vertices,&billboard_indices,&billboard_rgba)};
 
 
 
@@ -268,11 +267,6 @@ fn main() {
         //optional a.)
         let time_location = colorchange(simple_shader.program_id);
         
-
-        // Used to demonstrate keyboard handling for exercise 2.
-        let mut _arbitrary_number = 0.0; // feel free to remove
-
-
         //SetUp matrix transformation as uniform value:
         let transform_name = std::ffi::CString::new("transform").unwrap();
         let matrix_location = unsafe{ gl::GetUniformLocation(simple_shader.program_id, transform_name.as_ptr())
@@ -406,6 +400,8 @@ fn main() {
                 gl::BindVertexArray(my_vao);
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
 
+
+                //billboard drawing
                 gl::UniformMatrix4fv(matrix_location,1,gl::FALSE,billboard_transform.as_ptr());
                 gl::BindVertexArray(billboard_vao);
                 gl::DrawElements(gl::TRIANGLES,6,gl::UNSIGNED_INT,std::ptr::null());
