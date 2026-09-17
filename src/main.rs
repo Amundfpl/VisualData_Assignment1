@@ -81,6 +81,7 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>, rgba: &Vec<f32>) -
     gl::GenVertexArrays(1 ,&mut vao);
     gl::BindVertexArray(vao);
 
+
     // * Generate a VBO and bind it
     gl::GenBuffers(1,  &mut vbo);
     gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
@@ -222,6 +223,28 @@ fn main() {
         let my_vao= unsafe {create_vao(&vertices, &indices, &rgba)
         };
 
+        let billboard_vertices = vec![
+            -0.3, -0.3, 0.0,
+            0.3, -0.3, 0.0,
+            0.3,  0.3, 0.0,
+            -0.3,  0.3, 0.0,
+        ];
+
+        let billboard_indices = vec![
+            0, 1, 2,
+            0, 2, 3,
+        ];
+
+        let billboard_rgba = vec![
+            1.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
+            1.0, 0.0, 0.0, 1.0,
+        ];
+        
+        let billboard_vao = unsafe {
+    create_vao(&billboard_vertices,&billboard_indices,&billboard_rgba)};
+
 
 
         let mut camera = glm::Vec3::new(0.0, 0.0, 3.0);
@@ -360,7 +383,10 @@ fn main() {
             let project: glm::Mat4 = glm::perspective(window_aspect_ratio,45.0_f32.to_radians(),1.0,100.0);
             transform = project*vertical_rotation*horizontal_rotation*trans*transform;
 
-
+            let billboard_position =  glm::translation(&glm::vec3(1.0, 0.0, 0.0));
+            let billboard_rotation: glm::Mat4 = camera_rotation;
+            let billboard_model = billboard_position * billboard_rotation;
+            let billboard_transform = project * vertical_rotation * horizontal_rotation * trans * billboard_model;
 
             unsafe {
                 // Clear the color and depth buffers
@@ -377,13 +403,12 @@ fn main() {
                 gl::UniformMatrix4fv(matrix_location, 1, gl::FALSE, transform.as_ptr());
                 //println!("Camera value x = {}", camera.x);
 
-
                 gl::BindVertexArray(my_vao);
                 gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
 
-
-
-
+                gl::UniformMatrix4fv(matrix_location,1,gl::FALSE,billboard_transform.as_ptr());
+                gl::BindVertexArray(billboard_vao);
+                gl::DrawElements(gl::TRIANGLES,6,gl::UNSIGNED_INT,std::ptr::null());
             }
 
             // Display the new color buffer on the display
