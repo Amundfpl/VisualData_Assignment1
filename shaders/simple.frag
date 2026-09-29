@@ -2,8 +2,11 @@
 
 layout(location=0) out vec4 color;
 layout(location=4) in vec4 rgba;
+layout(location=6) in vec3 normals;
 
 uniform float Time;          // task d.)
+
+vec3 lightDirection = normalize(vec3(0.8, -0.5, 0.6));
 
 void changeColor(){
         float red = 0.5 * (sin(Time) + 1.0);
@@ -47,8 +50,11 @@ void main()
 
     //optional task a.)
     //checkerBoard();
-
-    color = rgba;  
+    //color = normals * max(0.0, normals * (- lightDirection));
+    //color = vec4(normals, 1.0);
+    vec3 colorRGB  = rgba.rgb;
+    float lightIntensity = max(0.0, dot(normals, (- lightDirection) ));
+    color = vec4(colorRGB * lightIntensity, 1.0);
     
 
 

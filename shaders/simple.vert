@@ -3,9 +3,14 @@
 layout(location=2) in vec3 position;
 layout(location=3) in vec4 rgba;
 layout(location=4) out vec4 Vcolor;
+layout(location=5) in vec3 normalVectors;
+layout(location=6) out vec3 normals;
+layout(location=7) uniform mat4 model;
 
 
 uniform mat4 transform;
+
+
 
 uniform float Time;
 
@@ -51,4 +56,7 @@ void main()
     vec4 newPosition = transform * vec4(position, 1.0);
     gl_Position = newPosition;
     Vcolor = rgba;
+    mat3 normalMatrix = mat3(model);
+    vec3 transformedNormals = normalize(normalMatrix * normalVectors);
+    normals = transformedNormals;
 }

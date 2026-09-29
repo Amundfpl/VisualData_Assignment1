@@ -8,17 +8,25 @@
 #![allow(unused_variables)]
 */
 extern crate nalgebra_glm as glm;
+use core::f64;
 use std::{ mem, ptr, os::raw::c_void };
-use std::thread;
+use std::{f32, thread};
 use std::sync::{Mutex, Arc, RwLock};
 
 mod shader;
 mod util;
+mod mesh; 
+mod scene_graph;
+mod toolbox;
 
-use gl::BufferData;
-use glm::{Mat4, length};
+use scene_graph::SceneNode;
+use gl::{BindVertexArray, BufferData, TIME_ELAPSED, UniformMatrix4fv};
+use glm::{Mat4, dot, identity, length, vec3};
 use glutin::event::{Event, WindowEvent, DeviceEvent, KeyboardInput, ElementState::{Pressed, Released}, VirtualKeyCode::{self, *}};
 use glutin::event_loop::ControlFlow;
+
+use crate::mesh::Helicopter;
+use crate::toolbox::{Heading, simple_heading_animation};
 
 // initial window size
 const INITIAL_SCREEN_W: u32 = 800;
@@ -68,13 +76,13 @@ fn colorchange(program_id: u32) -> i32 {
 // Get a null pointer (equivalent to an offset of 0)
 // ptr::null()
 
-
 // == // Generate your VAO here
-unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>, rgba: &Vec<f32>) -> u32 {
+unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>, rgba: &Vec<f32>, normalVectors: &Vec<f32>) -> u32 {
     let mut vao: u32 = 0;
     let mut vbo: u32 = 0;
     let mut c_vbo: u32 = 0;
     let mut  index_buffer: u32 = 0;
+    let mut normalV: u32 = 0;
 
 
      // * Generate a VAO and bind it
@@ -112,6 +120,16 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>, rgba: &Vec<f32>) -
     gl::EnableVertexAttribArray(3);
 
 
+    //Normal vector Vertex buffer object filled. 
+    gl::GenBuffers(1, &mut normalV);
+    gl::BindBuffer(gl::ARRAY_BUFFER, normalV);
+
+    gl::BufferData(gl::ARRAY_BUFFER, byte_size_of_array(normalVectors), pointer_to_array(normalVectors), gl::STATIC_DRAW);
+
+    gl::VertexAttribPointer(5, 3, gl::FLOAT, gl::FALSE, 0, std::ptr::null());
+    gl::EnableVertexAttribArray(5);
+
+
 
     // * Generate a IBO and bind it
     gl::GenBuffers(1,  &mut index_buffer);
@@ -135,6 +153,34 @@ unsafe fn create_vao(vertices: &Vec<f32>, indices: &Vec<u32>, rgba: &Vec<f32>) -
     return vao;
 }
 
+
+
+unsafe fn draw_scene(node: &scene_graph::SceneNode, 
+    view_projection_matrix: &glm::Mat4,
+    transformation_so_far: &glm::Mat4,
+    matrix_location: i32){
+        let to_origin = glm::translation(&(-node.reference_point));
+        let rotation_x = glm::rotation(node.rotation.x, &glm::vec3(1.0,0.0,0.0));
+        let rotation_y = glm::rotation(node.rotation.y, &glm::vec3(0.0,1.0,0.0));
+        let rotation_z = glm::rotation(node.rotation.z, &glm::vec3(0.0,0.0,1.0));
+        let back_from_origin = glm::translation(&(node.reference_point));
+        let position = glm::translation(&node.position);
+        let relative_transformation = position * back_from_origin * rotation_z * rotation_y * rotation_x * to_origin;
+        let current_transformation = transformation_so_far * relative_transformation;
+        let mvp = view_projection_matrix * current_transformation;
+        
+        if node.vao_id != 0{
+            gl::UniformMatrix4fv(matrix_location, 1, gl::FALSE, mvp.as_ptr());
+            gl::UniformMatrix4fv(7, 1, gl::FALSE, current_transformation.as_ptr());
+            gl::BindVertexArray(node.vao_id);
+            gl::DrawElements(gl::TRIANGLES, node.index_count, gl::UNSIGNED_INT, std::ptr::null());
+        } 
+            
+
+    for &child in &node.children{
+        draw_scene(&*child, view_projection_matrix, &current_transformation, matrix_location);
+    }
+}
 
 fn main() {
     // Set up the necessary objects to deal with windows and event handling
@@ -194,59 +240,75 @@ fn main() {
             println!("OpenGL\t: {}", util::get_gl_string(gl::VERSION));
             println!("GLSL\t: {}", util::get_gl_string(gl::SHADING_LANGUAGE_VERSION));
         }
+       
+        let terrain = mesh::Terrain::load("./resources/lunarsurface.obj");
+        let terrain_vao = unsafe{ create_vao(&terrain.vertices, &terrain.indices, &terrain.colors, &terrain.normals)};
 
-        // == // Set up your VAO around here
-        let vertices = vec![
-            0.25, -0.25,  1.0,   // VERY close: view-space z ≈ -1.2
-            -1.0,  1.25,  1.0,   // far:        view-space z ≈ -8.0
-            -1.0,  -0.25,  1.0,   // far:        view-space z ≈ -8.0
-            0.25, 1.25, 1.0,
+        let helicpoter = mesh::Helicopter::load("resources/helicopter.obj");
 
-            
+        let helicopter_body = helicpoter.body;
+        let helicopter_door = helicpoter.door;
+        let helicopter_main_rotor = helicpoter.main_rotor;
+        let helicopter_tail_rotor = helicpoter.tail_rotor;
 
-        ];
-        let indices = vec![
-            0,1,2,
-            1,0,3,
-        ];
-
-        let rgba: Vec<f32> = vec![
-            0.0, 0.0, 0.0, 1.0,
-            1.0, 0.0, 0.0, 1.0,
-            1.0, 0.0, 0.0, 1.0,
-
-            1.0, 0.0, 1.0, 1.0,
-            0.0, 1.0, 0.0, 1.0,
-            1.0, 0.0, 0.0, 1.0,
-        ];
-
-        let my_vao= unsafe {create_vao(&vertices, &indices, &rgba)
+        let helicopter_body_vao = unsafe {
+            create_vao(&helicopter_body.vertices, &helicopter_body.indices, &helicopter_body.colors, &helicopter_body.normals)
+        };
+        let helicopter_door_vao = unsafe {
+            create_vao(&helicopter_door.vertices, &helicopter_door.indices, &helicopter_door.colors, &helicopter_door.normals)
+        };
+        let helicopter_main_rotor_vao = unsafe {
+            create_vao(&helicopter_main_rotor.vertices, &helicopter_main_rotor.indices, &helicopter_main_rotor.colors, &helicopter_main_rotor.normals)
+        };
+        let helicopter_tail_rotor_vao = unsafe {
+            create_vao(&helicopter_tail_rotor.vertices, &helicopter_tail_rotor.indices, &helicopter_tail_rotor.colors, &helicopter_tail_rotor.normals)
         };
 
-        let billboard_vertices = vec![
-            -0.3, -0.3, 0.0,
-            0.3, -0.3, 0.0,
-            0.3,  0.3, 0.0,
-            -0.3,  0.3, 0.0,
-        ];
 
-        let billboard_indices = vec![
-            0, 1, 2,
-            0, 2, 3,
-        ];
-
-        let billboard_rgba = vec![
-            1.0, 0.0, 0.0, 1.0,
-            1.0, 0.0, 0.0, 1.0,
-            1.0, 0.0, 0.0, 1.0,
-            1.0, 0.0, 0.0, 1.0,
-        ];
+        // original
+        let mut root_node = scene_graph::SceneNode::new();
+        let mut terrain_scene_node = scene_graph::SceneNode::from_vao(terrain_vao, terrain.index_count);
+        //let mut root_helicopter = scene_graph::SceneNode::new();
+        let mut h_body_scene_node = scene_graph::SceneNode::from_vao(helicopter_body_vao, helicopter_body.index_count); 
+        let mut h_door_scene_node = scene_graph::SceneNode::from_vao(helicopter_door_vao, helicopter_door.index_count);
+        let mut h_main_rotor_scene_node = scene_graph::SceneNode::from_vao(helicopter_main_rotor_vao, helicopter_main_rotor.index_count);  
+        let mut h_tail_rotor_scene_node = scene_graph::SceneNode::from_vao(helicopter_tail_rotor_vao, helicopter_tail_rotor.index_count); 
         
-        let billboard_vao = unsafe { create_vao(&billboard_vertices,&billboard_indices,&billboard_rgba)};
+
+        let mut helicopters = Vec::new();
+        for _ in 0..5 {
+            helicopters.push(scene_graph::SceneNode::new());
+        }
+
+        //original
+        /* 
+        root_helicopter.add_child(&h_body_scene_node);
+        root_helicopter.add_child(&h_door_scene_node);
+        root_helicopter.add_child(&h_main_rotor_scene_node);
+        root_helicopter.add_child(&h_tail_rotor_scene_node);
+        terrain_scene_node.add_child(&root_helicopter);
+    */
+        
+        for i in 0..helicopters.len(){
+            helicopters[i].add_child(&h_body_scene_node);
+            helicopters[i].add_child(&h_door_scene_node);
+            helicopters[i].add_child(&h_main_rotor_scene_node);
+            helicopters[i].add_child(&h_tail_rotor_scene_node);
+            terrain_scene_node.add_child(&helicopters[i]);
+        }
+        root_node.add_child(&terrain_scene_node);
+        //root_node.print();
+        //root_helicopter.print();
+        //terrain_scene_node.print();
+
+        //set rotation points:
+        h_tail_rotor_scene_node.reference_point = glm::vec3(0.35, 2.3, 10.4);
+        h_main_rotor_scene_node.reference_point = glm::vec3(0.0, 3.0, 0.0);
+        h_door_scene_node.reference_point = glm::vec3(0.35, 2.3, 10.4);
+        h_body_scene_node.reference_point = glm::vec3(0.0, 0.0, 0.0);
 
 
-
-        let mut camera = glm::Vec3::new(0.0, 0.0, 3.0);
+        let mut camera = glm::Vec3::new(1.0, 0.0, -0.25);
         let mut camera_angle = glm::vec2(0.0, 0.0);
         // == // Set up your shaders here
 
@@ -306,48 +368,50 @@ fn main() {
             // == // Please compute camera transforms here (exercise 2 & 3)
         let mut movement = glm::vec4(0.0, 0.0, 0.0, 0.0);
 
+        let movement_speed: f32 = 50.0;
+
         if let Ok(keys) = pressed_keys.lock() {
             for key in keys.iter() {
                 match key {
 
                     VirtualKeyCode::W => {
-                        movement.z -= 1.0;
+                        movement.z -= 1.0*movement_speed;
                     }
 
                     VirtualKeyCode::S => {
-                        movement.z += 1.0;
+                        movement.z += 1.0*movement_speed;
                     }
 
                     VirtualKeyCode::A => {
-                        movement.x -= 1.0;
+                        movement.x -= 1.0*movement_speed;
                     }
 
                     VirtualKeyCode::D => {
-                        movement.x += 1.0;
+                        movement.x += 1.0*movement_speed;
                     }
 
                     VirtualKeyCode::Space => {
-                        movement.y += 1.0;
+                        movement.y += 1.0*movement_speed;
                     }
 
                     VirtualKeyCode::LShift => {
-                        movement.y -= 1.0;
+                        movement.y -= 1.0*movement_speed;
                     }
 
                     VirtualKeyCode::Left => {
-                        camera_angle.x += delta_time;
+                        camera_angle.x += delta_time*2.0;
                     }
 
                     VirtualKeyCode::Right => {
-                        camera_angle.x -= delta_time;
+                        camera_angle.x -= delta_time*2.0;
                     }
 
                     VirtualKeyCode::Up => {
-                        camera_angle.y += delta_time;
+                        camera_angle.y += delta_time*2.0;
                     }
 
                     VirtualKeyCode::Down => {
-                        camera_angle.y -= delta_time;
+                        camera_angle.y -= delta_time*2.0;
                     }
 
                     _ => {}
@@ -369,18 +433,20 @@ fn main() {
             camera.x += world_movement.x * delta_time;
             camera.y += world_movement.y * delta_time;
             camera.z += world_movement.z * delta_time;
+            
+            let identity_matrix : glm::Mat4 = glm::identity(); 
 
             let mut transform : glm::Mat4 = glm::identity();
             let trans: glm::Mat4 = glm::translation(&glm::vec3(-camera.x,-camera.y,-camera.z));
             let horizontal_rotation: glm::Mat4 = glm::rotation(-camera_angle.x, &glm::vec3(0.0, 1.0, 0.0));
             let vertical_rotation: glm::Mat4 = glm::rotation(-camera_angle.y, &glm::vec3(1.0, 0.0, 0.0));
-            let project: glm::Mat4 = glm::perspective(window_aspect_ratio,45.0_f32.to_radians(),1.0,100.0);
+            let project: glm::Mat4 = glm::perspective(window_aspect_ratio,45.0_f32.to_radians(),1.0,1000.0);
             transform = project*vertical_rotation*horizontal_rotation*trans*transform;
 
-            let billboard_position =  glm::translation(&glm::vec3(1.0, 0.0, 0.0));
-            let billboard_rotation: glm::Mat4 = camera_rotation;
-            let billboard_model = billboard_position * billboard_rotation;
-            let billboard_transform = project * vertical_rotation * horizontal_rotation * trans * billboard_model;
+            //let billboard_position =  glm::translation(&glm::vec3(1.0, 0.0, 0.0));
+            //let billboard_rotation: glm::Mat4 = camera_rotation;
+            //let billboard_model = billboard_position * billboard_rotation;
+            //let billboard_transform = project * vertical_rotation * horizontal_rotation * trans * billboard_model;
 
             unsafe {
                 // Clear the color and depth buffers
@@ -394,17 +460,69 @@ fn main() {
                 // Task d: animated colour
                 gl::Uniform1f(time_location, elapsed); //task d.)
 
-                gl::UniformMatrix4fv(matrix_location, 1, gl::FALSE, transform.as_ptr());
-                //println!("Camera value x = {}", camera.x);
+                //let animation = toolbox::simple_heading_animation(elapsed);
 
-                gl::BindVertexArray(my_vao);
-                gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
+                //original
+                /*  
+                root_helicopter.position.x = animation.x;
+                root_helicopter.position.z = animation.z;
+                root_helicopter.rotation.y = animation.yaw;
+                root_helicopter.rotation.z = animation.roll;
+                root_helicopter.rotation.x = animation.pitch;
+                */
+
+                for i in 0..helicopters.len() {
+                    let offset = i as f32 * 3.1;
+                    let animation = toolbox::simple_heading_animation(elapsed + offset);
+                    helicopters[i].position.x = animation.x;
+                    helicopters[i].position.z = animation.z;
+
+                    helicopters[i].rotation.y = animation.yaw;
+                    helicopters[i].rotation.z = animation.roll;
+                    helicopters[i].rotation.x = animation.pitch;
+        }
+
+
+                //apply for all helicopters since we use the same nodes:
+                h_main_rotor_scene_node.rotation.y = elapsed * 10.0;
+                h_tail_rotor_scene_node.rotation.x = elapsed * 10.0;
+                
+                
+                //gl::UniformMatrix4fv(matrix_location, 1, gl::FALSE, transform.as_ptr());
+                //println!("Camera value x = {}", camera.x);
+                //println!("Camera value y = {}", camera.y);
+                //println!("Camera value z = {}", camera.z);
+
+
+                //gl::BindVertexArray(my_vao);
+                //gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
 
 
                 //billboard drawing
-                gl::UniformMatrix4fv(matrix_location,1,gl::FALSE,billboard_transform.as_ptr());
-                gl::BindVertexArray(billboard_vao);
-                gl::DrawElements(gl::TRIANGLES,6,gl::UNSIGNED_INT,std::ptr::null());
+                //gl::UniformMatrix4fv(matrix_location,1,gl::FALSE,billboard_transform.as_ptr());
+                //gl::BindVertexArray(billboard_vao);
+                //gl::DrawElements(gl::TRIANGLES,6,gl::UNSIGNED_INT,std::ptr::null());
+
+                //now using scene graph to draw:
+                /*
+                
+
+                gl::BindVertexArray(terrain_vao);
+                gl::DrawElements(gl::TRIANGLES, terrain.index_count, gl::UNSIGNED_INT, std::ptr::null());
+                //helicopter
+                gl::BindVertexArray(helicopter_body_vao);
+                gl::DrawElements(gl::TRIANGLES, helicopter_body.index_count, gl::UNSIGNED_INT, std::ptr::null());
+
+                gl::BindVertexArray(helicopter_door_vao);
+                gl::DrawElements(gl::TRIANGLES, helicopter_door.index_count, gl::UNSIGNED_INT, std::ptr::null());
+
+                gl::BindVertexArray(helicopter_main_rotor_vao);
+                gl::DrawElements(gl::TRIANGLES, helicopter_main_rotor.index_count, gl::UNSIGNED_INT, std::ptr::null());
+
+                gl::BindVertexArray(helicopter_tail_rotor_vao);
+                gl::DrawElements(gl::TRIANGLES, helicopter_tail_rotor.index_count, gl::UNSIGNED_INT, std::ptr::null());
+                */
+                draw_scene(&root_node, &transform,  &identity_matrix, matrix_location);
             }
 
             // Display the new color buffer on the display
