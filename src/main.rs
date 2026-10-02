@@ -274,7 +274,7 @@ fn main() {
         let mut h_main_rotor_scene_node = scene_graph::SceneNode::from_vao(helicopter_main_rotor_vao, helicopter_main_rotor.index_count);  
         let mut h_tail_rotor_scene_node = scene_graph::SceneNode::from_vao(helicopter_tail_rotor_vao, helicopter_tail_rotor.index_count); 
         
-
+        let mut testhelicopter = scene_graph::SceneNode::new();
         let mut helicopters = Vec::new();
         for _ in 0..5 {
             helicopters.push(scene_graph::SceneNode::new());
@@ -288,6 +288,12 @@ fn main() {
         root_helicopter.add_child(&h_tail_rotor_scene_node);
         terrain_scene_node.add_child(&root_helicopter);
     */
+        testhelicopter.add_child(&h_body_scene_node);
+        testhelicopter.add_child(&h_door_scene_node);
+        testhelicopter.add_child(&h_main_rotor_scene_node);
+        testhelicopter.add_child(&h_tail_rotor_scene_node);
+        terrain_scene_node.add_child(&testhelicopter);
+
         
         for i in 0..helicopters.len(){
             helicopters[i].add_child(&h_body_scene_node);
@@ -304,11 +310,11 @@ fn main() {
         //set rotation points:
         h_tail_rotor_scene_node.reference_point = glm::vec3(0.35, 2.3, 10.4);
         h_main_rotor_scene_node.reference_point = glm::vec3(0.0, 3.0, 0.0);
-        h_door_scene_node.reference_point = glm::vec3(0.35, 2.3, 10.4);
+        h_door_scene_node.reference_point = glm::vec3(1.0, 0.0, 1.0);
         h_body_scene_node.reference_point = glm::vec3(0.0, 0.0, 0.0);
 
 
-        let mut camera = glm::Vec3::new(1.0, 0.0, -0.25);
+        let mut camera = glm::Vec3::new(1.0,0.0,1.0);
         let mut camera_angle = glm::vec2(0.0, 0.0);
         // == // Set up your shaders here
 
@@ -338,6 +344,8 @@ fn main() {
         // The main rendering loop
         let first_frame_time = std::time::Instant::now();
         let mut previous_frame_time = first_frame_time;
+        let mut door_open = false;
+        let mut e_was_pressed = false;
         loop {
             // Compute time passed since the previous frame and since the start of the program
             let now = std::time::Instant::now();
@@ -371,6 +379,7 @@ fn main() {
         let movement_speed: f32 = 50.0;
 
         if let Ok(keys) = pressed_keys.lock() {
+            let e_pressed = keys.contains(&VirtualKeyCode::E);
             for key in keys.iter() {
                 match key {
 
@@ -417,6 +426,18 @@ fn main() {
                     _ => {}
                 }
             }
+            // Toggle door only once when E changes from released -> pressed
+            if e_pressed && !e_was_pressed {
+                door_open = !door_open;
+
+                if door_open {
+                    h_door_scene_node.position.z = 2.0;
+                } else {
+                    h_door_scene_node.position.z = 0.0;
+                }
+            }
+
+            e_was_pressed = e_pressed;
         }
 
             let camera_horizontal_rotation: glm::Mat4 = glm::rotation(
@@ -470,6 +491,7 @@ fn main() {
                 root_helicopter.rotation.z = animation.roll;
                 root_helicopter.rotation.x = animation.pitch;
                 */
+                testhelicopter.rotation.y = 90.0;
 
                 for i in 0..helicopters.len() {
                     let offset = i as f32 * 3.1;
