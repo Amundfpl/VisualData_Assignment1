@@ -274,7 +274,7 @@ fn main() {
         let mut h_main_rotor_scene_node = scene_graph::SceneNode::from_vao(helicopter_main_rotor_vao, helicopter_main_rotor.index_count);  
         let mut h_tail_rotor_scene_node = scene_graph::SceneNode::from_vao(helicopter_tail_rotor_vao, helicopter_tail_rotor.index_count); 
         
-        let mut testhelicopter = scene_graph::SceneNode::new();
+        //let mut testhelicopter = scene_graph::SceneNode::new();
         let mut helicopters = Vec::new();
         for _ in 0..5 {
             helicopters.push(scene_graph::SceneNode::new());
@@ -287,12 +287,13 @@ fn main() {
         root_helicopter.add_child(&h_main_rotor_scene_node);
         root_helicopter.add_child(&h_tail_rotor_scene_node);
         terrain_scene_node.add_child(&root_helicopter);
-    */
         testhelicopter.add_child(&h_body_scene_node);
         testhelicopter.add_child(&h_door_scene_node);
         testhelicopter.add_child(&h_main_rotor_scene_node);
         testhelicopter.add_child(&h_tail_rotor_scene_node);
         terrain_scene_node.add_child(&testhelicopter);
+    */
+        
 
         
         for i in 0..helicopters.len(){
@@ -491,7 +492,7 @@ fn main() {
                 root_helicopter.rotation.z = animation.roll;
                 root_helicopter.rotation.x = animation.pitch;
                 */
-                testhelicopter.rotation.y = 90.0;
+                //testhelicopter.rotation.y = 90.0;
 
                 for i in 0..helicopters.len() {
                     let offset = i as f32 * 3.1;
